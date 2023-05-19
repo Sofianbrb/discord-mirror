@@ -1,0 +1,8 @@
+{
+    "account_token": "The token of the account here",
+    "channels": {
+        "channelid_1" : ["webhook1", "webhook2", "webhook3"],
+        "channelid_2" : ["webhook1", "webhook2"]
+    },
+    "authorized_users": ["userid1", "userid2"]
+}
