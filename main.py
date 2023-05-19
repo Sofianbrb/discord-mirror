@@ -23,12 +23,33 @@ def add_authorized_user(user_id):
 			data['authorized_users'].append(user_id)
 			with open('data.json', 'w') as f:
 				json.dump(data, f)
-			print("User ID added to database.")
+			return ("User ID added to database.")
 			authorized_users = get_authorized_users() # Update the authorized_users variable
 		else:
-			print("User ID already in database.")
+			return ("User ID already in database.")
 	except Exception as e:
 		senderror = input("Sorry, there was an error when adding the user ID to the database. Do you want to print the error? (y/n) ")
+		if senderror.lower() == 'y':
+			print(e)
+		else:
+			pass
+
+# Remove a user ID off of the list of authorized users
+def remove_authorized_user(user_id):
+	try:
+		user_id = int(user_id)
+		with open('data.json', 'r') as f:
+			data = json.load(f)
+		if user_id in data['authorized_users']:
+			data['authorized_users'].remove(user_id)
+			with open('data.json', 'w') as f:
+				json.dump(data, f)
+			return ("User ID removed from database.")
+			authorized_users = get_authorized_users() # Update the authorized_users variable
+		else:
+			return ("User ID not in database.")
+	except Exception as e:
+		senderror = input("Sorry, there was an error when removing the user ID from the database. Do you want to print the error? (y/n) ")
 		if senderror.lower() == 'y':
 			print(e)
 		else:
@@ -220,7 +241,8 @@ if authorized_users == []:
 			print("No authorized users added. Continuing...")
 			break
 		elif user_id.lower() != 'none' and user_id.isdigit():
-			add_authorized_user((user_id))
+			print(add_authorized_user((user_id)))
+			authorized_users += [int(user_id)]
 			break
 		elif user_id.lower() != 'none' and not user_id.isdigit():
 			print("Invalid user ID. Please try again.")
@@ -487,6 +509,81 @@ async def on_message(message):
 			}
 			response=requests.post(webhookresponseurl, json=data, headers=headers)
 	
+	if message.content.startswith(">adduser"):
+
+		#This is a command to add a user to the authorized users list, the people that are able to make commands. 
+		# It's built like this: >adduser {user id} {webhook response url}. More details in the readme file.
+
+		#First, we get the different data
+		words = message.content.split(" ")
+		user_id = words[1]
+		webhookresponseurl = None
+		try:
+			webhookresponseurl = words[2]
+		except:
+			pass
+
+		# Now we check if it is a user. Can't tell if it's a valid user, but we can presume by looking to the ID (Should be numbers only)
+		if not user_id.isdigit():
+			if webhookresponseurl:
+				data = {
+					"content": f"<@{message.author.id}> Invalid user ID (Contains caracters othen than digits). Please try again."
+				}
+				headers = {
+					"Content-Type": "application/json"
+				}
+				response=requests.post(webhookresponseurl, json=data, headers=headers)
+			return
+			
+		# Now we can add the user to the database.
+		add_authorized_user_response = add_authorized_user(user_id)
+		# And of course, if there's a response webhook, we'll send a message to it.
+		if webhookresponseurl:
+			data = {
+				"content": f"<@{message.author.id}> {add_authorized_user_response}"
+			}
+			headers = {
+				"Content-Type": "application/json"
+			}
+			response=requests.post(webhookresponseurl, json=data, headers=headers)
+
+	if message.content.startswith(">removeuser"):
+
+		# The opposite of adduser. This command removes a user from the authorized users list.
+
+		#First we check if the user is in the list
+		if message.author.id not in authorized_users:
+			if webhookresponseurl:
+				data = {
+					"content": f"<@{message.author.id}> Sorry, you are not authorized to remove users."
+				}
+				headers = {
+					"Content-Type": "application/json"
+				}
+				response=requests.post(webhookresponseurl, json=data, headers=headers)
+			return
+		
+		# Now we get the different data
+		words = message.content.split(" ")
+		user_id = words[1]
+		webhookresponseurl = None
+		try:
+			webhookresponseurl = words[2]
+		except:
+			pass
+
+		# Now we can remove the user from the database.
+		remove_authorized_user_response = remove_authorized_user(user_id)
+		# And of course, if there's a response webhook, we'll send a message to it.
+		if webhookresponseurl:
+			data = {
+				"content": f"<@{message.author.id}> {remove_authorized_user_response}"
+			}
+			headers = {
+				"Content-Type": "application/json"
+			}
+			response=requests.post(webhookresponseurl, json=data, headers=headers)
+		
 
 	# Finally, we can manage the mirroring part. 
 
@@ -500,6 +597,13 @@ async def on_message(message):
 	# Get every webhook that follows this channel by invoking the get_webhook_list function.
 	webhooks_list = get_webhooks_list(message.channel.id)
 	
+	# Because message.author.avatar.url returns an error (NoneType) when calling it if the user doesn't have an avatar, we will define it right here instead.
+	avatar = None
+	try:
+		avatar = message.author.avatar.url
+	except:
+		avatar = "https://cdn.discordapp.com/attachments/1096418851887009842/1108838934441639976/discord-6832787_960_720.png" #This is an image of discord I found on Google. You can change it by whatever you want or just remove the avatar off of the messages.
+
 	# We will check one by one for raw text (message content), embeds, images/attachments and commands.
 
 	if message.content:
@@ -508,7 +612,7 @@ async def on_message(message):
 			data = {
 				"content": message.content,
 				"username": message.author.name,
-				"avatar_url": "https://cdn.discordapp.com/attachments/1096418851887009842/1108838934441639976/discord-6832787_960_720.png"
+				"avatar_url": avatar
 			}
 			headers = {
 				"Content-Type": "application/json"
@@ -524,7 +628,7 @@ async def on_message(message):
 			data = {
 				"embeds": dict_embeds,
 				"username": message.author.name,
-				"avatar_url":  "https://cdn.discordapp.com/attachments/1096418851887009842/1108838934441639976/discord-6832787_960_720.png"
+				"avatar_url":  avatar
 			}
 			headers = {
 				"Content-Type": "application/json"
@@ -542,13 +646,13 @@ async def on_message(message):
 					'file': (attachment_name, file_data)
 				}
 				for webhook in webhooks_list:
-					requests.post(webhook, files=payload)
+					requests.post(webhook, files=payload, data={'username': message.author.name, 'avatar_url': avatar})
 
 	# We will check if the message is a command. If it is, we'll just send relative information to the webhooks.
 	if message.interaction:
 		data = {
 			"username": message.author.name,
-			"avatar_url":  "https://cdn.discordapp.com/attachments/1096418851887009842/1108838934441639976/discord-6832787_960_720.png",
+			"avatar_url": avatar,
 			"embeds": [{
 				"title": "Command used.",
 				"description": f"Command: /{message.interaction.name}\nUser: {message.interaction.user.name}#{message.interaction.user.discriminator}\nBot: {message.author.name}#{message.author.discriminator}",
