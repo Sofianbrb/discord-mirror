@@ -273,17 +273,19 @@ async def on_message(message):
 		# First thing to do is to check if the user is authorized to add channels. If not, we'll check if there's a response webhook to inform them. If not, we will just ignore this command.
 		if message.author.id not in authorized_users:
 			#Get the webhook response url if there is one and send back that the user is not authorized to add channels.
-			if message.content.split(" ")[3]:
-				webhookresponseurl = message.content.split(" ")[3]
-				data = {
-					"content": f"<@{message.author.id}> Sorry, you are not authorized to add channels."
-				}
-				headers = {
-					"Content-Type": "application/json"
-				}
-				response=requests.post(webhookresponseurl, json=data, headers=headers)
-			return
-
+			try:
+				if message.content.split(" ")[3]:
+					webhookresponseurl = message.content.split(" ")[3]
+					data = {
+						"content": f"<@{message.author.id}> Sorry, you are not authorized to add channels."
+					}
+					headers = {
+						"Content-Type": "application/json"
+					}
+					response=requests.post(webhookresponseurl, json=data, headers=headers)
+				return
+			except:
+				pass
 		# Get the channel ID, webhook URL and webhook response URL from the message
 		# I am going to split them in a list, according to spaces.
 		words = message.content.split(" ")
@@ -359,10 +361,10 @@ async def on_message(message):
 		channelid = words[1]
 		webhookurl = words[2]
 		webhookurl_guild_id = None
-		if message.content.split(" ")[3]:
+		try:
 			webhookresponseurl = message.content.split(" ")[3]
-		else:
-			webhookresponseurl = None
+		except:
+			pass
 		
 		# Now that we have the informations, we can proceed to remove the channel from the database. But first thing is ti check if webhookurl is a valid webhook.
 		webhookurl_data = requests.get(webhookurl).json()
