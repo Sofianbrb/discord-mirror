@@ -263,9 +263,7 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-	if message.author.id == client.user.id:	# If the message is from the bot, we will ignore it
-		return
-	
+		
 	global channels_to_listen_to	# Import the list of channels we're listening to.
 	if message.content.startswith(">addwebhook"):
 		#So the message here is to check if to add a channel to the list of channels we listen to. It's built like this: >addchannel {channelid} {webhookurl} {webhook response url}. More details in the readme file.
@@ -592,6 +590,9 @@ async def on_message(message):
 	# First step would be to check if the message is from a channel that we're listening to. If not, we'll just ignore it.
 	# The channels will be a list of channel IDs we designated when the bot was starting. Whenever we make a change to the channels, it'd automatically update the list.
 	# But in case it doesn't, we can use the command >refresh to refresh the list of channels we're listening to.
+
+	if message.author.id == client.user.id:	# If the message is from the bot, we will ignore it. We don't do this earlier in case it's a command
+		return
 
 	if str(message.channel.id) not in channels_to_listen_to:
 		return
